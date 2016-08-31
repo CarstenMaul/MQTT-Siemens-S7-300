@@ -107,8 +107,8 @@ VAR
     msgId : INT;
     typeOfPacket : INT;
     
-    runTimer : SFB4;
-    resetTime : TIME;
+    Runtimer : MQTT_Runtime;
+    resetTime : TIME; //
     
     tl : INT;
     paylPos : INT;
@@ -209,8 +209,10 @@ CASE (tcpState) OF
         END_IF;
         IF netcmd_error THEN
             cntrl_lastErrStatus := cntrl_status;
+            tcpState := TCP_STATE_DISCONNECTED;
         END_IF;
         // *** CP CODE END ***
+
     ;
     
     TCP_STATE_CONNECTED:
@@ -277,6 +279,33 @@ CASE (tcpState) OF
     ELSE:;          
 END_CASE;
 
+(*
+    *******************************************
+    MQTT Timout Handling without TCP Connection
+    *******************************************
+*)
+Runtimer(IN := (mqttData._state = MQTT_STATE_CONNECTING OR mqttData._state = MQTT_STATE_CONNECTED), RES := false,RTIME := mqttData.runTime);
+
+//Recalculate timeout when timer is set to T#0
+
+IF TIME_TO_DINT(RTIME) = 0 AND (TIME_TO_DINT(mqttData.lastInActivity) <> 0 OR TIME_TO_DINT(mqttData.lastOutActivity <> 0)) THEN
+    Runtimer.run := MQTT_KEEPALIVE;
+
+    IF lastOutActivity <> 0 THEN
+        lastOutActivity := MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(lastOutActivity));
+    END_IF;
+
+    IF lastInActivity <> 0 THEN
+        lastInActivity :=  MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(lastOutActivity));
+    END_IF;
+END_IF;
+
+IF (mqttData._state = MQTT_STATE_CONNECTING OR mqttData._state = MQTT_STATE_CONNECTED) AND tcpState <> TCP_STATE_CONNECTED THEN
+    IF ((mqttData.runTime - mqttData.lastInActivity) > mqttGlobals.MQTT_KEEPALIVE) OR ((mqttData.runTime - mqttData.lastOutActivity) > mqttGlobals.MQTT_KEEPALIVE) THEN
+        // Connection Timeout!
+        mqttData._state := MQTT_STATE_DISCONNECTED;
+    END_IF;
+END_IF;
 
 (* 
     ******************************
@@ -365,11 +394,6 @@ IF (mqttData.pRec >= mqttData.pRead) THEN
 ELSE
     recBufLeft := mqttGlobals.TCP_RECVBUFFERSIZE - (mqttData.pRead - mqttData.pRec);
 END_IF;
-
-
-// Connection time
-runTimer(IN := true, PT := T#24D);
-mqttData.runTime := runTimer.ET;
 
 
 (*
