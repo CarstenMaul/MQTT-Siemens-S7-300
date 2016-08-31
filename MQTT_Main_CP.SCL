@@ -93,7 +93,6 @@ VAR_TEMP
         byteLSB : BYTE;
         byteMSB : BYTE;
     END_STRUCT;
-    
 END_VAR
 
 VAR
@@ -284,19 +283,20 @@ END_CASE;
     MQTT Timout Handling without TCP Connection
     *******************************************
 *)
-Runtimer(IN := (mqttData._state = MQTT_STATE_CONNECTING OR mqttData._state = MQTT_STATE_CONNECTED), RES := false,RTIME := mqttData.runTime);
+Runtimer(IN := ((mqttData._state = MQTT_STATE_CONNECTING) OR (mqttData._state = MQTT_STATE_CONNECTED)),RES := false);
+mqttData.runTime := Runtimer.RTIME;
 
 //Recalculate timeout when timer is set to T#0
 
-IF TIME_TO_DINT(RTIME) = 0 AND (TIME_TO_DINT(mqttData.lastInActivity) <> 0 OR TIME_TO_DINT(mqttData.lastOutActivity <> 0)) THEN
-    Runtimer.run := MQTT_KEEPALIVE;
+IF TIME_TO_DINT(mqttData.runTime) = 0 AND (TIME_TO_DINT(mqttData.lastInActivity) <> 0 OR TIME_TO_DINT(mqttData.lastOutActivity)<> 0) THEN
+    Runtimer.run := TIME_TO_DINT(mqttGlobals.MQTT_KEEPALIVE);
 
-    IF lastOutActivity <> 0 THEN
-        lastOutActivity := MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(lastOutActivity));
+    IF TIME_TO_DINT(mqttData.lastOutActivity) <> 0 THEN
+        mqttData.lastOutActivity := mqttGlobals.MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(mqttData.lastOutActivity));
     END_IF;
 
-    IF lastInActivity <> 0 THEN
-        lastInActivity :=  MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(lastOutActivity));
+    IF TIME_TO_DINT(mqttData.lastInActivity) <> 0 THEN
+        mqttData.lastInActivity :=  mqttGlobals.MQTT_KEEPALIVE - (2073600 - TIME_TO_DINT(mqttData.lastOutActivity));
     END_IF;
 END_IF;
 
