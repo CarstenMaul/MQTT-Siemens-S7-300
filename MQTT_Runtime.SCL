@@ -13,6 +13,7 @@ VAR
     last    :   DINT;
     now     :   DINT;   
     run     :   DINT;   // in secs
+    FP_IN   :   BOOL;
 END_VAR
 
 LABEL
@@ -20,6 +21,16 @@ LABEL
 END_LABEL
 
 BEGIN
+
+IF IN AND NOT FP_IN THEN
+    last := 0;
+    FP_IN := true;
+END_IF;
+
+IF NOT IN AND FP_IN THEN
+    FP_IN := false;
+END_IF;
+
 
 IF IN AND NOT RES THEN
     now := DWORD_TO_DINT(Unixtime());
