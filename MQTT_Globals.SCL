@@ -39,6 +39,7 @@ STRUCT
     TCP_RECVBUFFERSIZE  :   INT :=  8192;   // size of TCP receive buffer
     TCP_MAXRECVSIZE     :   INT := 4096;   // TCP max receive packet size
     TCP_SENDBUFFERSIZE  :   INT := 4096;
+    TCP_TIMEOUT         :   TIME := T#30s;
     
     // MQtt States
     MQTT_CONNECTION_TIMEOUT     : INT := -4;
